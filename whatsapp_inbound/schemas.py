@@ -41,3 +41,17 @@ class WANormalizedInbound(Schema):
 
     referral: Optional[Dict[str, Any]] = None
     raw: Dict[str, Any]
+
+
+class MessageLogItem(Schema):
+    tenant: str
+    contact_key: str
+    wamid: str
+    timestamp: str
+    type: str
+    text_body: Optional[str] = None
+    channel: str
+
+
+class MessageLogResponse(Schema):
+    items: list[MessageLogItem]

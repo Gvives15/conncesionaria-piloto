@@ -3,7 +3,7 @@ from django.db import transaction, IntegrityError
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 
-from .schemas import WANormalizedInbound
+from .schemas import WANormalizedInbound, MessageLogResponse, MessageLogItem
 from .models import Tenant, Contact, Conversation, Message, Attribution, MemoryRecord
 
 api = NinjaAPI()
@@ -132,3 +132,28 @@ def whatsapp_inbound(request, payload: WANormalizedInbound):
     except IntegrityError:
         # si hubo carrera y entró duplicado por wamid, lo tratamos como dedupe
         return {"ok": True, "deduped": True}
+
+
+@api.get("/v1/whatsapp/inbound/logs", response=MessageLogResponse)
+def whatsapp_inbound_logs(request, tenant_id: str | None = None, limit: int = 50):
+    qs = Message.objects.order_by("-timestamp")
+    if tenant_id:
+        t = Tenant.objects.filter(name=tenant_id).first()
+        if not t:
+            return {"items": []}
+        qs = qs.filter(tenant=t)
+    qs = qs.select_related("tenant", "contact")[: max(1, min(limit, 200))]
+    items = []
+    for m in qs:
+        items.append(
+            MessageLogItem(
+                tenant=m.tenant.name,
+                contact_key=m.contact.contact_key,
+                wamid=m.wamid,
+                timestamp=m.timestamp.isoformat(),
+                type=m.type,
+                text_body=m.text_body,
+                channel=m.channel,
+            )
+        )
+    return {"items": items}
