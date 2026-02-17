@@ -1,7 +1,7 @@
 annotated-types==0.7.0
-asgiref==3.11.1
+asgiref>=3.7,<4
 dj-database-url==3.1.1
-Django==6.0.2
+Django>=4.2,<6
 django-ninja==1.5.3
 psycopg2-binary==2.9.11
 pydantic==2.12.5
