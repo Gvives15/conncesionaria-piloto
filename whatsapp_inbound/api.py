@@ -1,5 +1,5 @@
 from ninja import NinjaAPI
-from django.db import transaction, IntegrityError
+from django.db import transaction, IntegrityError, connection
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 
@@ -132,6 +132,22 @@ def whatsapp_inbound(request, payload: WANormalizedInbound):
     except IntegrityError:
         # si hubo carrera y entró duplicado por wamid, lo tratamos como dedupe
         return {"ok": True, "deduped": True}
+
+
+@api.get("/health")
+def health(request):
+    return {"ok": True}
+
+
+@api.get("/health/db")
+def health_db(request):
+    try:
+        connection.ensure_connection()
+        engine = connection.settings_dict.get("ENGINE", "")
+        name = connection.settings_dict.get("NAME", "")
+        return {"db_ok": True, "engine": engine, "name": name}
+    except Exception as e:
+        return 500, {"db_ok": False, "error": str(e)}
 
 
 @api.get("/v1/whatsapp/inbound/logs", response=MessageLogResponse)
