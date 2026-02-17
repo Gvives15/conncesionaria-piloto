@@ -74,12 +74,15 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
+_ssl_req = os.environ.get('DB_SSL_REQUIRE', 'true').lower() in ('1', 'true', 'yes', 'on')
+_db_url = os.environ.get('DATABASE_URL')
+if not _db_url:
+    raise RuntimeError('DATABASE_URL is required for PostgreSQL')
 DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
-        conn_max_age=600
+    'default': dj_database_url.parse(
+        _db_url,
+        conn_max_age=600,
+        ssl_require=_ssl_req
     )
 }
 
