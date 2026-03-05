@@ -11,11 +11,15 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 import dj_database_url
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Add 'apps' directory to sys.path
+sys.path.append(str(BASE_DIR / 'apps'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,7 +31,13 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-t$sfo)*t_jbb^nvy*3$5k
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'false').lower() in ('1', 'true', 'yes', 'on')
 
-ALLOWED_HOSTS = ['testserver', '127.0.0.1', '.vercel.app', '.now.sh', 'localhost']
+_allowed_hosts_env = os.environ.get('ALLOWED_HOSTS')
+if _allowed_hosts_env:
+    ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()]
+    if '*' in ALLOWED_HOSTS:
+        ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = ['testserver', '127.0.0.1', '.vercel.app', '.now.sh', 'localhost']
 
 
 # Application definition
@@ -39,12 +49,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'whatsapp_inbound',
+    'motor_response',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -72,6 +85,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+APPEND_SLASH = False
+USE_X_FORWARDED_HOST = True
+# optional: if behind proxy that sets X-Forwarded-Proto
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Database
 _ssl_req = os.environ.get('DB_SSL_REQUIRE', 'true').lower() in ('1', 'true', 'yes', 'on')
@@ -135,3 +153,47 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+
+_cors_allow_all = os.environ.get('CORS_ALLOW_ALL', 'true').lower() in ('1', 'true', 'yes', 'on', '*')
+if _cors_allow_all:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    _cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
+
+_csrf_trusted = os.environ.get('CSRF_TRUSTED_ORIGINS')
+if _csrf_trusted:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(',') if o.strip()]
+
+# Logging: mostrar motivo exacto de 400 en consola (django.request)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security.DisallowedHost': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}

@@ -1,0 +1,77 @@
+[
+  {
+    "step": "1. Inicio - Saludo/Precio",
+    "input": "Hola, cual es el precio?",
+    "expected": {
+      "event": "CONSULTA_PRECIO",
+      "mode": "FREEFORM"
+    },
+    "actual": {
+      "event": "CONSULTA_PRECIO",
+      "mode": "FREEFORM",
+      "conf": 0.95
+    },
+    "passed": true,
+    "duration": "4.15s"
+  },
+  {
+    "step": "2. Continuidad - Pregunta corta",
+    "input": "y el costo de envio?",
+    "expected": {
+      "event": "CONSULTA_PRECIO",
+      "mode": "FREEFORM"
+    },
+    "actual": {
+      "event": "CONSULTA_PRECIO",
+      "mode": "FREEFORM",
+      "conf": 0.95
+    },
+    "passed": true,
+    "duration": "3.13s"
+  },
+  {
+    "step": "3. Handoff - Pedir humano",
+    "input": "quiero hablar con alguien",
+    "expected": {
+      "event": "SOPORTE_HUMANO",
+      "mode": "TEMPLATE"
+    },
+    "actual": {
+      "event": "SOPORTE_HUMANO",
+      "mode": "FREEFORM",
+      "conf": 0.95
+    },
+    "passed": false,
+    "duration": "4.28s"
+  },
+  {
+    "step": "4. Seguridad - Insulto",
+    "input": "son una estafa y una mierda",
+    "expected": {
+      "event": "SAFETY_BLOCK",
+      "mode": "TEMPLATE"
+    },
+    "actual": {
+      "event": "SAFETY_BLOCK",
+      "mode": "TEMPLATE",
+      "conf": 1.0
+    },
+    "passed": true,
+    "duration": "0.00s"
+  },
+  {
+    "step": "5. Ventana Cerrada - Reintento",
+    "input": "hola sigo esperando",
+    "expected": {
+      "event": "CONSULTA_PRECIO",
+      "mode": "TEMPLATE"
+    },
+    "actual": {
+      "event": "SOPORTE_HUMANO",
+      "mode": "TEMPLATE",
+      "conf": 0.95
+    },
+    "passed": true,
+    "duration": "5.41s"
+  }
+]

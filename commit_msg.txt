@@ -1,0 +1,1 @@
+Refactor: Reorganize project structure into apps, scripts, docs, and legacy folders. Update configuration and tests.

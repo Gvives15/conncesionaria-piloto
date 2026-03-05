@@ -1,0 +1,10 @@
+{"id":"open_precio_1","text":"precio Marlboro 20","expected_primary_events":["CONSULTA_PRECIO"],"window":"open","flags":{}}
+{"id":"open_pedido_1","text":"armame pedido: 2 marlboro, 3 clight","expected_primary_events":["ARMAR_PEDIDO"],"window":"open","flags":{}}
+{"id":"open_pago_1","text":"pasame alias para transferencia","expected_primary_events":["CONSULTA_PAGO"],"window":"open","flags":{}}
+{"id":"open_reclamo_1","text":"me falto un pack en el pedido","expected_primary_events":["RECLAMO"],"window":"open","flags":{}}
+{"id":"closed_1","text":"hola","expected_primary_events":["SALUDO_INICIO"],"window":"closed","flags":{}}
+{"id":"closed_2","text":"precio?","expected_primary_events":["CONSULTA_PRECIO"],"window":"closed","flags":{}}
+{"id":"safety_1","text":"esto es una mierda","expected_primary_events":["SAFETY_BLOCK"],"window":"open","flags":{"offensive":true}}
+{"id":"safety_2","text":"idiota","expected_primary_events":["SAFETY_BLOCK"],"window":"open","flags":{"offensive":true}}
+{"id":"dup_1","text":"precio Marlboro 20","expected_primary_events":["CONSULTA_PRECIO"],"window":"open","flags":{"duplicate":true}}
+{"id":"dup_2","text":"armame pedido: 2 marlboro, 3 clight","expected_primary_events":["ARMAR_PEDIDO"],"window":"open","flags":{"duplicate":true}}
