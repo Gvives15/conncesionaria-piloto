@@ -274,6 +274,7 @@ def _motor_respond_impl(payload: MotorRespondIn):
     from .playbooks import get_playbook
     from .state_manager import update_sales_state
     from .action_builder import build_actions_from_playbook
+    from .llm_classifier import generate_draft # Importamos Drafter
 
     # 1. Extractor (Ojos)
     signals_data = extract_signals(user_input_json={"text": payload.text})
@@ -312,8 +313,20 @@ def _motor_respond_impl(payload: MotorRespondIn):
         signals=signals
     )
     
+    # --- DRAFTER INTEGRATION (Shadow Mode) ---
+    # Si hay una acción CALL_TEXT_AI, ejecutamos el Drafter para ver qué diría
+    draft_text = None
+    for action in shadow_actions:
+        if action["type"] == "CALL_TEXT_AI":
+            # Ejecutamos Drafter real
+            draft_text = generate_draft(input_json=action["input_json"])
+            # Inyectamos el draft en la acción para debug/log
+            action["_debug_draft_text"] = draft_text
+            break
+
+    
     # Logueamos la decisión completa para validación
-    logger.info(f"[HYBRID MOTOR] Decision: {router_decision.playbook_key} | Actions: {len(shadow_actions)} generated")
+    logger.info(f"[HYBRID MOTOR] Decision: {router_decision.playbook_key} | Actions: {len(shadow_actions)} | Draft: {draft_text[:50] if draft_text else 'None'}...")
     # Para debug profundo: logger.debug(f"[HYBRID ACTIONS]: {shadow_actions}")
 
     # --- FIN PIPELINE HÍBRIDO (CONTINÚA FLUJO LEGACY) ---

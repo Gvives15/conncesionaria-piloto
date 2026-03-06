@@ -68,16 +68,19 @@ def build_actions_from_playbook(
         
     # CASO B: Generación de Texto (Freeform con instrucciones)
     else:
+        # Normalizar style_rules (str) a copy_rules (List[str])
+        style_list = [playbook.style_rules] if playbook.style_rules else []
+
         # Construimos el payload OFICIAL para el Drafter
         gen_payload = CallTextAIPayload(
             playbook_id=playbook.id,
             objective=playbook.goal,
-            style_rules=playbook.style_rules,
+            copy_rules=style_list,
             sales_state=state.model_dump(),
             signals=signals.model_dump(),
             context_summary=f"User intends to {signals.intent}. Missing: {state.missing}. Next: {state.next_action}",
             question_limit=1,
-            copy_rules=[]
+            cta_type="open" # Default for now
         )
 
         text_ai_action = {

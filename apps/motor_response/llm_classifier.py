@@ -211,6 +211,62 @@ RULES:
         }
 
 
+def generate_draft(
+    *,
+    input_json: Dict[str, Any],
+) -> str:
+    """
+    Función específica para el DRAFTER (Boca).
+    Utiliza un prompt INLINE para redactar el mensaje final basado en la estrategia decidida.
+    """
+    c = _client()
+    model = os.getenv("LLM_DRAFTER_MODEL", "gpt-4o")
+
+    system_prompt = """
+You are a PROFESSIONAL SALES DRAFTER for a car dealership.
+Your ONLY job is to write the final message to the customer based on the provided STRATEGY and CONTEXT.
+
+INPUT:
+- Playbook ID & Objective: What you need to achieve.
+- Sales State: What we know about the lead.
+- Context Summary: Narrative of the situation.
+- Copy Rules: Tone and style guidelines.
+- Question Limit: Maximum number of questions to ask.
+
+RULES:
+1. STRICTLY follow the "objective". Do not deviate.
+2. Adopt the tone specified in "copy_rules". If none, be professional, helpful, and concise.
+3. Respect "question_limit". Do not overwhelm the user.
+4. Use the info in "sales_state" and "signals" to personalize the message (e.g. use the car model name).
+5. DO NOT invent information (prices, stock, dates) if it is not in the context.
+6. If you don't know something, say so politely or guide the conversation to get that info.
+7. Return ONLY the message text. No JSON, no markdown, no quotes.
+
+GOAL: Write a message that moves the sale forward according to the objective.
+    """.strip()
+
+    user_text = json.dumps(input_json, ensure_ascii=False)
+
+    try:
+        resp = c.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"INPUT_CONTEXT: {user_text}"}
+            ],
+            temperature=0.5, # Un poco de creatividad para redacción
+            max_tokens=300
+        )
+        
+        draft = resp.choices[0].message.content or ""
+        return draft.strip()
+
+    except Exception as e:
+        print(f"DRAFTER ERROR: {e}")
+        # Fallback seguro
+        return "Hola, gracias por escribirnos. ¿En qué podemos ayudarte hoy?"
+
+
 def build_classifier_input(
     *,
     tenant_id: str,

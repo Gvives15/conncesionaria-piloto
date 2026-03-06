@@ -150,12 +150,12 @@ class CallTextAIPayload(BaseModel):
     """
     playbook_id: str
     objective: str
-    style_rules: str
+    copy_rules: List[str] = Field(default_factory=list) # Renamed from style_rules, and normalized to list
     sales_state: Dict[str, Any]
     signals: Dict[str, Any]
     context_summary: str
     question_limit: int = 1
-    copy_rules: List[str] = Field(default_factory=list)
+    cta_type: str = "open" # "open", "specific", "none"
 
 
 class HandoffPayload(BaseModel):
