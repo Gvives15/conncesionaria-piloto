@@ -1,0 +1,91 @@
+from ninja import Schema
+from typing import Any, Dict, Optional, List
+
+
+class WANormalizedContact(Schema):
+    wa_id: str
+    contact_key: str
+    profile_name: Optional[str] = None
+
+
+class WANormalizedMessageText(Schema):
+    body: Optional[str] = None
+
+
+class WANormalizedMessage(Schema):
+    wamid: str
+    timestamp: str  # ISO
+    type: str
+    text: Optional[WANormalizedMessageText] = None
+    interactive: Optional[Dict[str, Any]] = None
+    media: Optional[Dict[str, Any]] = None
+    raw: Dict[str, Any]
+
+
+class WANormalizedMetadata(Schema):
+    provider: str = "cloud_api"
+    waba_id: Optional[str] = None
+    phone_number_id: Optional[str] = None
+    display_phone_number: Optional[str] = None
+
+
+class WANormalizedInbound(Schema):
+    tenant_id: str
+    trace_id: str
+    received_at: str
+    channel: str = "whatsapp"
+
+    metadata: WANormalizedMetadata
+    contact: WANormalizedContact
+    message: WANormalizedMessage
+
+    referral: Optional[Dict[str, Any]] = None
+    raw: Dict[str, Any]
+
+
+class MessageLogItem(Schema):
+    tenant: str
+    contact_key: str
+    wamid: str
+    timestamp: str
+    type: str
+    text_body: Optional[str] = None
+    channel: str
+
+
+class MessageLogResponse(Schema):
+    items: list[MessageLogItem]
+
+
+class TriggerIn(Schema):
+    type: str  # "kw"
+    value: str
+    points: int
+
+
+class TenantEventIn(Schema):
+    name: str
+    max_points: int
+    triggers: List[TriggerIn]
+    freeform_reply: str
+    template_key: Optional[str] = ""
+
+
+class SeedEventsIn(Schema):
+    tenant_id: str
+    business_name: Optional[str] = None
+    domain: Optional[str] = "generic"
+    events: List[TenantEventIn]
+
+
+class TemplateIn(Schema):
+    name: str
+    category: Optional[str] = "UTILITY"
+    language: Optional[str] = "es_AR"
+    components_json: List[Dict[str, Any]] = []
+    meta_status: Optional[str] = "APPROVED"
+
+
+class SeedTemplatesIn(Schema):
+    tenant_id: str
+    templates: List[TemplateIn]

@@ -1,0 +1,230 @@
+version: "3.8"
+
+services:
+  # =========================
+  # Tu API (mini motor)
+  # =========================
+  motor_api:
+    build: .
+    container_name: motor_api
+    command: >
+      gunicorn config.asgi:application
+      --bind 0.0.0.0:8000
+      --workers 4
+      --worker-class uvicorn.workers.UvicornWorker
+      --timeout 60
+      --access-logfile -
+      --error-logfile -
+      --log-level debug
+      --forwarded-allow-ips "*"
+    volumes:
+      - .:/app
+    environment:
+      DEBUG: "0"
+      SECRET_KEY: ${SECRET_KEY}
+      ALLOWED_HOSTS: "*"
+      DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
+      REDIS_URL: redis://redis:6379/1
+      DB_SSL_REQUIRE: "0"
+    ports:
+      - "8000:8000"   # opcional en VPS; si ponés proxy, lo podés quitar
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      core_net:
+        aliases:
+          - motorapi
+          - motor-api
+
+  # =========================
+  # Outbox Worker (Nuevo)
+  # =========================
+  outbox_worker:
+    build: .
+    container_name: outbox_worker
+    command: python manage.py run_outbox_worker
+    restart: always
+    depends_on:
+      - db
+      - n8n
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
+      REDIS_URL: redis://redis:6379/1
+      # URL interna de n8n (nombre del servicio:puerto)
+      # Nota: Usamos 'n8n' como host porque estamos DENTRO de la red docker
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678/webhook/whatsapp-inbound-event}
+      OUTBOX_BATCH_SIZE: 25
+      OUTBOX_POLL_SLEEP: 1.0
+      OUTBOX_HTTP_TIMEOUT: 10
+      OUTBOX_MAX_ATTEMPTS: 8
+      DB_SSL_REQUIRE: "0"
+    volumes:
+      - .:/app
+    networks:
+      - core_net
+
+  db:
+    image: postgres:15
+    container_name: motor_postgres
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - core_net
+    # en VPS no lo expongas:
+    ports:
+      - "5432:5432"
+
+  # =========================
+  # Infra n8n
+  # =========================
+  redis:
+    image: redis:7-alpine
+    container_name: n8n_redis
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - core_net
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: always
+    ports:
+      - "5678:5678"   # en VPS ideal detrás de proxy https
+    environment:
+      # Auth UI
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
+
+      # URL / red
+      N8N_HOST: ${N8N_HOST}
+      N8N_PORT: ${N8N_PORT}
+      N8N_PROTOCOL: ${N8N_PROTOCOL}
+      WEBHOOK_URL: ${WEBHOOK_URL}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE}
+
+      # Logs
+      N8N_LOG_LEVEL: ${N8N_LOG_LEVEL}
+      NODE_ENV: production
+
+      # DB n8n (usa el mismo Postgres por MVP)
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: postgres
+      DB_POSTGRESDB_USER: postgres
+      DB_POSTGRESDB_PASSWORD: postgres
+
+      # Security
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "false"
+
+      # Queue mode
+      EXECUTIONS_MODE: queue
+      QUEUE_BULL_REDIS_HOST: redis
+      QUEUE_BULL_REDIS_PORT: 6379
+      N8N_PROCESS_WORKFLOW_ID: ${N8N_PROCESS_WORKFLOW_ID}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - core_net
+
+  n8n_worker1:
+    image: n8nio/n8n:latest
+    container_name: n8n_worker1
+    restart: always
+    command: worker
+    environment:
+      NODE_ENV: production
+      N8N_LOG_LEVEL: ${N8N_LOG_LEVEL}
+
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: postgres
+      DB_POSTGRESDB_USER: postgres
+      DB_POSTGRESDB_PASSWORD: postgres
+
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "false"
+
+      EXECUTIONS_MODE: queue
+      QUEUE_BULL_REDIS_HOST: redis
+      QUEUE_BULL_REDIS_PORT: 6379
+      N8N_WORKER_CONCURRENCY: 10
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      n8n:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - core_net
+
+  n8n_worker2:
+    image: n8nio/n8n:latest
+    container_name: n8n_worker2
+    restart: always
+    command: worker
+    environment:
+      NODE_ENV: production
+      N8N_LOG_LEVEL: ${N8N_LOG_LEVEL}
+
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: postgres
+      DB_POSTGRESDB_USER: postgres
+      DB_POSTGRESDB_PASSWORD: postgres
+
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "false"
+
+      EXECUTIONS_MODE: queue
+      QUEUE_BULL_REDIS_HOST: redis
+      QUEUE_BULL_REDIS_PORT: 6379
+      N8N_WORKER_CONCURRENCY: 10
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      n8n:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - core_net
+
+networks:
+  core_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  n8n_data:

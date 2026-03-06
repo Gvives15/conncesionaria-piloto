@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+artifacts/
+
+# Environment variables
+.env
+
+# Vercel
+.vercel
+
+# Windows binaries (local tools)
+uv.exe
+uvw.exe
+uvx.exe
+
+# Local logs
+openai_logs.jsonl
+docs/E2E_STRICT_RUN_LOGS.md
+docs/E2E_STRICT_AUDIT_REPORT.md
