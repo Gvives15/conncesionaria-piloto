@@ -74,3 +74,69 @@ class MotorRespondOut(BaseModel):
     memory_update: Optional[MemoryUpdate] = None
     telemetry: Dict[str, Any] = Field(default_factory=dict)
     warning: Optional[str] = None
+
+
+# --- NUEVOS CONTRATOS INTERNOS (PREIMPLEMENTACIÓN MOTOR HÍBRIDO) ---
+
+class VehicleInterest(BaseModel):
+    make: Optional[str] = None
+    model: Optional[str] = None
+    trim: Optional[str] = None
+    year: Optional[str] = None
+    new_or_used: Optional[str] = None
+
+
+class CommercialInfo(BaseModel):
+    budget: Optional[str] = None
+    payment_type: Optional[str] = None
+    timeframe: Optional[str] = None
+    city: Optional[str] = None
+
+
+class SalesState(BaseModel):
+    """
+    Estado comercial vivo del lead.
+    Vive dentro de MemoryRecord.sales_state_json
+    """
+    stage: str = "discover"
+    temperature: str = "warm"
+    intent: str = "general"
+    objection_primary: str = "none"
+    missing: List[str] = Field(default_factory=list)
+    next_action: str = "ask_model"
+    lead_type: str = "new"
+    
+    vehicle: VehicleInterest = Field(default_factory=VehicleInterest)
+    commercial: CommercialInfo = Field(default_factory=CommercialInfo)
+
+
+class Signals(BaseModel):
+    """
+    Salida pura del Extractor (Ojos).
+    No decide nada, solo estructura lo que vio.
+    """
+    intent: str
+    objection: Optional[str] = None
+    risk: bool = False
+    entities: Dict[str, Any] = Field(default_factory=dict)
+
+
+class PlaybookConfig(BaseModel):
+    """
+    Configuración estática de una jugada comercial.
+    """
+    id: str
+    goal: str
+    style_rules: str
+    required_actions: List[Dict[str, Any]] = Field(default_factory=list)
+    force_template: Optional[str] = None
+
+
+class RouterDecision(BaseModel):
+    """
+    Decisión final del Router (Cerebro).
+    """
+    playbook_key: str
+    reason: str
+    priority_level: int
+

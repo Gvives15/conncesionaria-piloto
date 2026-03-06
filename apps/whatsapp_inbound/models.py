@@ -122,6 +122,7 @@ class MemoryRecord(models.Model):
     active_secondary_events = models.JSONField(default=list)
     recent_events = models.JSONField(default=list)
     scores_json = models.JSONField(default=dict)
+    sales_state_json = models.JSONField(default=dict)
 
     last_user_message_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(default=timezone.now)
@@ -137,6 +138,8 @@ class MemoryRecord(models.Model):
             self.recent_events = []
         if self.scores_json is None:
             self.scores_json = {}
+        if self.sales_state_json is None:
+            self.sales_state_json = {}
         super().save(*args, **kwargs)
 
     class Meta:
