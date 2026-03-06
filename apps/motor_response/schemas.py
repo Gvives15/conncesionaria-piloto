@@ -140,3 +140,30 @@ class RouterDecision(BaseModel):
     reason: str
     priority_level: int
 
+
+# --- CONTRATOS OFICIALES DE NEXT_ACTIONS (HÍBRIDO) ---
+
+class CallTextAIPayload(BaseModel):
+    """
+    Payload específico para la acción CALL_TEXT_AI del Motor Híbrido.
+    Diseñado para alimentar al Drafter (Redactor).
+    """
+    playbook_id: str
+    objective: str
+    style_rules: str
+    sales_state: Dict[str, Any]
+    signals: Dict[str, Any]
+    context_summary: str
+    question_limit: int = 1
+    copy_rules: List[str] = Field(default_factory=list)
+
+
+class HandoffPayload(BaseModel):
+    """
+    Payload específico para HANDOFF_TO_HUMAN.
+    """
+    reason: str
+    department: Optional[str] = None
+    priority: str = "normal"
+
+
