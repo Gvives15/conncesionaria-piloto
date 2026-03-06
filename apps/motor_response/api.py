@@ -273,6 +273,7 @@ def _motor_respond_impl(payload: MotorRespondIn):
     from .router import decide_playbook
     from .playbooks import get_playbook
     from .state_manager import update_sales_state
+    from .action_builder import build_actions_from_playbook
 
     # 1. Extractor (Ojos)
     signals_data = extract_signals(user_input_json={"text": payload.text})
@@ -302,10 +303,18 @@ def _motor_respond_impl(payload: MotorRespondIn):
     # 4. Playbook (Estrategia)
     playbook = get_playbook(router_decision.playbook_key)
     
-    # 5. Action Gen (Boca) - Mapeo a estructura legacy por ahora
-    # Si el router activó una jugada, la usamos. Si no, seguimos con el flujo legacy.
-    # Por ahora solo logueamos para validar que el pipeline corre
-    logger.info(f"[HYBRID MOTOR] Pipeline decision: {router_decision} | State: {sales_state.stage}")
+    # 5. Action Gen (Boca) - Shadow Mode
+    # Generamos las acciones pero no las devolvemos todavía
+    shadow_actions = build_actions_from_playbook(
+        payload=payload,
+        playbook=playbook,
+        state=sales_state,
+        signals=signals
+    )
+    
+    # Logueamos la decisión completa para validación
+    logger.info(f"[HYBRID MOTOR] Decision: {router_decision.playbook_key} | Actions: {len(shadow_actions)} generated")
+    # Para debug profundo: logger.debug(f"[HYBRID ACTIONS]: {shadow_actions}")
 
     # --- FIN PIPELINE HÍBRIDO (CONTINÚA FLUJO LEGACY) ---
 
