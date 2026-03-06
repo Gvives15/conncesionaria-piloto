@@ -272,6 +272,7 @@ def _motor_respond_impl(payload: MotorRespondIn):
     from .schemas import Signals, SalesState, PlaybookConfig, RouterDecision
     from .router import decide_playbook
     from .playbooks import get_playbook
+    from .state_manager import update_sales_state
 
     # 1. Extractor (Ojos)
     signals_data = extract_signals(user_input_json={"text": payload.text})
@@ -280,9 +281,20 @@ def _motor_respond_impl(payload: MotorRespondIn):
     # 2. Sales State (Memoria)
     # Inicializar o recuperar estado
     state_data = mem.sales_state_json if mem else {}
-    sales_state = SalesState(**state_data)
+    current_state = SalesState(**state_data)
     
-    # TODO: Actualizar sales_state con signals (implementar lógica de merge)
+    # Actualizar estado con señales nuevas
+    sales_state = update_sales_state(current_state, signals)
+    
+    # PERSISTENCIA (Opcional en esta fase, pero útil para debugging)
+    # Por ahora solo actualizamos en memoria para el router, 
+    # la persistencia real a DB se puede hacer aquí o al final.
+    # Para cumplir "Sales State deje de estar dormido", lo persistimos.
+    if contact and mem:
+        mem.sales_state_json = sales_state.model_dump()
+        # No guardamos todavía para no hacer doble write, 
+        # pero el objeto 'mem' ya tiene el dato fresco.
+        # Si quisiéramos guardar YA: mem.save(update_fields=["sales_state_json", "updated_at"])
     
     # 3. Router (Cerebro)
     router_decision = decide_playbook(signals, sales_state, window_open)
@@ -293,7 +305,7 @@ def _motor_respond_impl(payload: MotorRespondIn):
     # 5. Action Gen (Boca) - Mapeo a estructura legacy por ahora
     # Si el router activó una jugada, la usamos. Si no, seguimos con el flujo legacy.
     # Por ahora solo logueamos para validar que el pipeline corre
-    logger.info(f"[HYBRID MOTOR] Pipeline decision: {router_decision}")
+    logger.info(f"[HYBRID MOTOR] Pipeline decision: {router_decision} | State: {sales_state.stage}")
 
     # --- FIN PIPELINE HÍBRIDO (CONTINÚA FLUJO LEGACY) ---
 

@@ -116,8 +116,8 @@ class Signals(BaseModel):
     No decide nada, solo estructura lo que vio.
     """
     intent: str
-    objection: Optional[str] = None
-    risk: bool = False
+    objection: Optional[str] = None  # Mapped from objection_primary
+    risk: bool = False               # Mapped from risk_flag
     entities: Dict[str, Any] = Field(default_factory=dict)
 
 
