@@ -267,6 +267,36 @@ def _motor_respond_impl(payload: MotorRespondIn):
             "telemetry": {"window_open": True, "llm_used": False, "reason": "NO_EVENTS_SEEDED"},
         }
 
+    # --- IMPORTACIONES DEL NUEVO PIPELINE HÍBRIDO ---
+    from .llm_classifier import extract_signals
+    from .schemas import Signals, SalesState, PlaybookConfig, RouterDecision
+    from .router import decide_playbook
+    from .playbooks import get_playbook
+
+    # 1. Extractor (Ojos)
+    signals_data = extract_signals(user_input_json={"text": payload.text})
+    signals = Signals(**signals_data)
+
+    # 2. Sales State (Memoria)
+    # Inicializar o recuperar estado
+    state_data = mem.sales_state_json if mem else {}
+    sales_state = SalesState(**state_data)
+    
+    # TODO: Actualizar sales_state con signals (implementar lógica de merge)
+    
+    # 3. Router (Cerebro)
+    router_decision = decide_playbook(signals, sales_state, window_open)
+    
+    # 4. Playbook (Estrategia)
+    playbook = get_playbook(router_decision.playbook_key)
+    
+    # 5. Action Gen (Boca) - Mapeo a estructura legacy por ahora
+    # Si el router activó una jugada, la usamos. Si no, seguimos con el flujo legacy.
+    # Por ahora solo logueamos para validar que el pipeline corre
+    logger.info(f"[HYBRID MOTOR] Pipeline decision: {router_decision}")
+
+    # --- FIN PIPELINE HÍBRIDO (CONTINÚA FLUJO LEGACY) ---
+
     # 4) Construir input para la IA clasificadora
     memory_json = {
         "active_primary_event": (mem.active_primary_event if mem else None),
